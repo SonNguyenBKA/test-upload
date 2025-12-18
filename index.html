@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Download QR</title>
+    <style>
+        .btn-download {
+            padding: 15px 30px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div style="text-align: center; margin-top: 50px;">
+        <img id="qrImage" src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=Success" width="200"><br><br>
+        
+        <button class="btn-download" onclick="handleDownload()">Download QR Code</button>
+    </div>
+
+    <script>
+        async function handleDownload() {
+            const imgElement = document.getElementById('qrImage');
+            const imageUrl = imgElement.src;
+            const fileName = 'qrcode.png';
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+            try {
+                // Thử fetch để lấy Blob (bắt buộc cho Share API trên Mobile và đặt tên file trên PC)
+                const response = await fetch(imageUrl, { mode: 'cors' });
+                if (!response.ok) throw new Error('Network response was not ok');
+                const blob = await response.blob();
+                
+                if (isMobile && navigator.share) {
+                    // MOBILE: Dùng Share API
+                    const file = new File([blob], fileName, { type: blob.type });
+                    await navigator.share({ files: [file] });
+                } else {
+                    // PC: Dùng Object URL để tải
+                    const blobUrl = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = blobUrl;
+                    link.download = fileName;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(blobUrl); // Giải phóng bộ nhớ
+                }
+            } catch (error) {
+                console.error("Fetch lỗi hoặc bị chặn CORS, chuyển sang tải cơ bản:", error);
+                
+                // CÁCH DỰ PHÒNG KHI CÓ LỖI (PC sẽ hoạt động ở đây nếu server ảnh chặn CORS)
+                const link = document.createElement('a');
+                link.href = imageUrl + (imageUrl.includes('?') ? '&' : '?') + 'download=true';
+                link.target = '_blank';
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+    </script>
+</body>
+</html>
